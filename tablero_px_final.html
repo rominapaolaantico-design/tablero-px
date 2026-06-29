@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tablero PX — Red de la Cañada</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<style>
+:root {
+  --teal: #2BA98B; --teal-dark: #1E8A70; --teal-light: #E8F7F3; --teal-mid: #5DCAA5;
+  --gray: #9B9B9B; --gray-dark: #2D2D2D; --gray-light: #F7FAF9; --gray-border: #E2EDEA;
+  --white: #fff; --danger: #E24B4A; --danger-light: #FDEAEA; --warning: #EF9F27; --warning-light: #FEF3E2;
+  --font: 'Nunito', sans-serif; --radius: 14px; --radius-sm: 8px;
+  --shadow: 0 2px 12px rgba(43,169,139,0.08); --shadow-md: 0 4px 24px rgba(43,169,139,0.13);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font); background: var(--gray-light); color: var(--gray-dark); min-height: 100vh; }
+
+/* LOGIN */
+#login-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,var(--teal),var(--teal-dark)); }
+.login-card { background:var(--white); border-radius:var(--radius); padding:2.5rem 2rem; width:100%; max-width:380px; box-shadow:var(--shadow-md); text-align:center; }
+.login-logo { width:180px; margin-bottom:1.5rem; }
+.login-title { font-size:18px; font-weight:700; margin-bottom:4px; }
+.login-sub { font-size:13px; color:var(--gray); margin-bottom:1.5rem; }
+.login-input { width:100%; padding:12px 14px; border:1.5px solid var(--gray-border); border-radius:var(--radius-sm); font-family:var(--font); font-size:14px; margin-bottom:12px; outline:none; transition:border .2s; }
+.login-input:focus { border-color:var(--teal); }
+.login-btn { width:100%; padding:13px; background:var(--teal); color:var(--white); border:none; border-radius:var(--radius-sm); font-family:var(--font); font-size:15px; font-weight:600; cursor:pointer; }
+.login-btn:hover { background:var(--teal-dark); }
+.login-error { color:var(--danger); font-size:12px; margin-top:8px; display:none; }
+
+/* DASHBOARD */
+#dashboard { display:none; }
+
+/* HEADER */
+.header { background:var(--white); border-bottom:1px solid var(--gray-border); padding:0 2rem; height:60px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:var(--shadow); }
+.header-left { display:flex; align-items:center; gap:14px; }
+.header-logo { height:32px; }
+.header-title { font-size:15px; font-weight:700; }
+.header-right { display:flex; align-items:center; gap:10px; }
+.header-tag { font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; background:var(--teal-light); color:var(--teal-dark); }
+.logout-btn { font-size:12px; color:var(--gray); background:none; border:none; cursor:pointer; font-family:var(--font); padding:4px 8px; border-radius:var(--radius-sm); }
+.logout-btn:hover { background:var(--gray-light); }
+
+/* TABS */
+.tabs { background:var(--white); border-bottom:1px solid var(--gray-border); padding:0 2rem; display:flex; gap:0; }
+.tab-btn { font-family:var(--font); font-size:14px; font-weight:600; padding:14px 20px; border:none; background:none; cursor:pointer; color:var(--gray); border-bottom:3px solid transparent; transition:all .2s; }
+.tab-btn.active { color:var(--teal); border-bottom-color:var(--teal); }
+
+/* TOOLBAR */
+.toolbar { background:var(--white); border-bottom:1px solid var(--gray-border); padding:10px 2rem; display:flex; gap:12px; flex-wrap:wrap; align-items:center; justify-content:space-between; }
+.toolbar-left { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.filter-label { font-size:12px; font-weight:600; color:var(--gray); }
+.filter-btn { font-size:12px; font-weight:600; padding:6px 14px; border-radius:20px; border:1.5px solid var(--gray-border); background:var(--white); color:var(--gray); cursor:pointer; font-family:var(--font); transition:all .15s; }
+.filter-btn.active { background:var(--teal); border-color:var(--teal); color:var(--white); }
+.filter-btn:hover:not(.active) { border-color:var(--teal); color:var(--teal); }
+.search-box { padding:7px 12px; border:1.5px solid var(--gray-border); border-radius:var(--radius-sm); font-family:var(--font); font-size:13px; outline:none; width:220px; transition:border .2s; }
+.search-box:focus { border-color:var(--teal); }
+
+/* MAIN */
+.main { padding:1.5rem 2rem; max-width:1300px; margin:0 auto; }
+
+/* BACK BTN */
+.back-btn { display:inline-flex; align-items:center; gap:6px; font-size:13px; font-weight:600; color:var(--teal); background:none; border:none; cursor:pointer; font-family:var(--font); padding:6px 0; margin-bottom:1rem; }
+.back-btn:hover { color:var(--teal-dark); }
+
+/* ALERTS */
+.alerts-box { background:var(--danger-light); border:1px solid #F5BFBF; border-radius:var(--radius); padding:1rem 1.25rem; margin-bottom:1.25rem; }
+.alerts-title { font-size:12px; font-weight:700; color:var(--danger); letter-spacing:.04em; text-transform:uppercase; margin-bottom:10px; }
+.alert-row { display:flex; align-items:flex-start; gap:10px; padding:8px 0; border-bottom:1px solid #F5BFBF; cursor:pointer; }
+.alert-row:last-child { border-bottom:none; padding-bottom:0; }
+.alert-row:hover { opacity:.8; }
+.alert-dot { width:7px; height:7px; border-radius:50%; background:var(--danger); flex-shrink:0; margin-top:5px; }
+.alert-text { font-size:13px; line-height:1.5; }
+.alert-meta { font-size:11px; color:var(--gray); margin-top:2px; }
+
+/* KPIs */
+.kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-bottom:1.25rem; }
+.kpi-card { background:var(--white); border-radius:var(--radius); padding:1.25rem 1.5rem; box-shadow:var(--shadow); border:1px solid var(--gray-border); }
+.kpi-label { font-size:11px; font-weight:600; color:var(--gray); text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px; }
+.kpi-val { font-size:32px; font-weight:700; line-height:1; margin-bottom:4px; }
+.kpi-val.ok { color:var(--teal); }
+.kpi-val.warn { color:var(--warning); }
+.kpi-val.danger { color:var(--danger); }
+.kpi-sub { font-size:11px; color:var(--gray); }
+.kpi-trend { font-size:11px; margin-top:4px; font-weight:600; }
+.kpi-trend.up { color:var(--teal); }
+.kpi-trend.down { color:var(--danger); }
+
+.section-label { font-size:11px; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:.05em; margin:1.5rem 0 10px; }
+
+/* TABLE */
+.table-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid var(--gray-border); overflow:hidden; margin-bottom:1.25rem; }
+.data-table { width:100%; border-collapse:collapse; font-size:13px; }
+.data-table th { text-align:left; font-weight:700; font-size:11px; color:var(--gray); padding:12px 16px; border-bottom:1px solid var(--gray-border); text-transform:uppercase; letter-spacing:.04em; background:var(--gray-light); cursor:pointer; user-select:none; }
+.data-table th:hover { color:var(--teal); }
+.data-table td { padding:12px 16px; border-bottom:1px solid var(--gray-border); color:var(--gray-dark); }
+.data-table tr:last-child td { border-bottom:none; }
+.data-table tbody tr { cursor:pointer; transition:background .15s; }
+.data-table tbody tr:hover td { background:var(--teal-light); }
+.sede-name { font-weight:600; }
+.click-hint { font-size:10px; color:var(--teal); margin-top:2px; }
+
+.score-wrap { display:flex; align-items:center; gap:8px; }
+.score-num { font-weight:700; min-width:28px; }
+.score-bar { flex:1; height:6px; background:var(--gray-border); border-radius:3px; min-width:50px; }
+.score-fill { height:6px; border-radius:3px; transition:width .4s; }
+
+.badge { display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:20px; }
+.badge-ok { background:var(--teal-light); color:var(--teal-dark); }
+.badge-warn { background:var(--warning-light); color:#7A4F06; }
+.badge-danger { background:var(--danger-light); color:#8B1A1A; }
+
+/* CHARTS GRID */
+.charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:1.25rem; }
+.chart-card { background:var(--white); border-radius:var(--radius); box-shadow:var(--shadow); border:1px solid var(--gray-border); padding:1.25rem 1.5rem; }
+.chart-title { font-size:13px; font-weight:700; margin-bottom:1rem; }
+.chart-wrap { height:200px; position:relative; }
+.chart-wrap.tall { height:280px; }
+
+/* COMMENTS */
+.comments-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin:1.5rem 0 10px; }
+.comments-filters { display:flex; gap:6px; flex-wrap:wrap; }
+.score-filter-btn { font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; border:1.5px solid var(--gray-border); background:var(--white); cursor:pointer; font-family:var(--font); transition:all .15s; }
+.score-filter-btn.active { background:var(--teal); border-color:var(--teal); color:var(--white); }
+.score-filter-btn.danger-active { background:var(--danger); border-color:var(--danger); color:var(--white); }
+.score-filter-btn.warn-active { background:var(--warning); border-color:var(--warning); color:var(--white); }
+
+.comments-list { display:flex; flex-direction:column; gap:8px; margin-bottom:1.5rem; }
+.comment-card { background:var(--white); border-radius:var(--radius); border:1px solid var(--gray-border); padding:12px 16px; box-shadow:var(--shadow); }
+.comment-card.negative { border-left:3px solid var(--danger); }
+.comment-card.warning { border-left:3px solid var(--warning); }
+.comment-card.positive { border-left:3px solid var(--teal); }
+.comment-head { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; flex-wrap:wrap; gap:4px; }
+.comment-sede { font-size:12px; font-weight:700; color:var(--teal-dark); }
+.comment-score { font-size:11px; font-weight:700; }
+.comment-date { font-size:10px; color:var(--gray); margin-top:2px; }
+.comment-text { font-size:13px; color:var(--gray-dark); line-height:1.5; }
+.comments-count { font-size:12px; color:var(--gray); }
+.load-more-btn { width:100%; padding:10px; background:var(--gray-light); border:1px solid var(--gray-border); border-radius:var(--radius-sm); font-family:var(--font); font-size:13px; font-weight:600; color:var(--gray); cursor:pointer; margin-bottom:1.5rem; }
+.load-more-btn:hover { background:var(--teal-light); color:var(--teal-dark); }
+
+/* TREND INDICATOR */
+.trend-up::before { content:'↑ '; }
+.trend-down::before { content:'↓ '; }
+
+/* DETAIL VIEW */
+.detail-header { display:flex; align-items:center; gap:16px; margin-bottom:1.5rem; flex-wrap:wrap; }
+.detail-sede-name { font-size:22px; font-weight:700; }
+.detail-sub { font-size:13px; color:var(--gray); }
+
+/* CENAS */
+.cenas-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; margin-bottom:1.25rem; }
+.cenas-card { background:var(--white); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); border:1px solid var(--gray-border); }
+.cenas-label { font-size:11px; font-weight:700; color:var(--gray); text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+.cenas-val { font-size:24px; font-weight:700; }
+.cenas-bar { height:4px; border-radius:2px; margin-top:8px; background:var(--gray-border); }
+.cenas-fill { height:4px; border-radius:2px; }
+.cenas-threshold { font-size:10px; color:var(--gray); margin-top:4px; }
+
+/* LOADING */
+.loading { display:flex; align-items:center; justify-content:center; min-height:300px; color:var(--gray); font-size:14px; gap:10px; flex-direction:column; }
+.spinner { width:28px; height:28px; border:3px solid var(--gray-border); border-top-color:var(--teal); border-radius:50%; animation:spin .7s linear infinite; }
+.loading-sub { font-size:12px; color:var(--gray); margin-top:4px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.empty { text-align:center; padding:3rem; color:var(--gray); font-size:14px; }
+
+@media (max-width:768px) {
+  .main { padding:1rem; }
+  .charts-grid { grid-template-columns:1fr; }
+  .header,.toolbar,.tabs { padding-left:1rem; padding-right:1rem; }
+  .search-box { width:100%; }
+}
+</style>
+</head>
+<body>
+
+<div id="login-screen">
+  <div class="login-card">
+    <img src="https://rominapaolaantico-design.github.io/tablero-px/logo.png" class="login-logo" alt="Red de la Cañada" onerror="this.style.display='none'">
+    <div class="login-title">Tablero de Experiencia del Paciente</div>
+    <div class="login-sub">Ingresá tu contraseña para acceder</div>
+    <input type="password" id="login-input" class="login-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="login-error">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <div class="header">
+    <div class="header-left">
+      <img src="https://rominapaolaantico-design.github.io/tablero-px/logo.png" class="header-logo" alt="Logo" onerror="this.style.display='none'">
+      <div class="header-title">Experiencia del Paciente</div>
+    </div>
+    <div class="header-right">
+      <span class="header-tag" id="last-update">Cargando...</span>
+      <button class="logout-btn" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="setTab('ambulatorio',this)">🏥 Ambulatorio</button>
+    <button class="tab-btn" onclick="setTab('internacion',this)">🛏️ Internación</button>
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <span class="filter-label">Período:</span>
+      <button class="filter-btn active" onclick="setPeriodo('30',this)">30 días</button>
+      <button class="filter-btn" onclick="setPeriodo('90',this)">90 días</button>
+      <button class="filter-btn" onclick="setPeriodo('365',this)">1 año</button>
+      <button class="filter-btn" onclick="setPeriodo('todos',this)">Todo</button>
+      <span class="filter-label" id="int-filter-label" style="margin-left:12px;display:none">Tipo:</span>
+      <button class="filter-btn active" id="int-filter-btn-ambos" onclick="setIntFilter('ambos',this)" style="display:none">Ambos</button>
+      <button class="filter-btn" id="int-filter-btn-estadía" onclick="setIntFilter('estadía',this)" style="display:none">Durante estadía</button>
+      <button class="filter-btn" id="int-filter-btn-alta" onclick="setIntFilter('alta',this)" style="display:none">Al alta</button>
+    </div>
+    <input type="text" class="search-box" id="search-box" placeholder="🔍 Buscar en comentarios..." oninput="onSearch()">
+  </div>
+
+  <div class="main" id="main-content">
+    <div class="loading"><div class="spinner"></div><div class="loading-sub">Cargando datos...</div></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://lpzubwvlrmybcfjbozug.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwenVid3Zscm15YmNmamJvenVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODI4MjksImV4cCI6MjA5NDI1ODgyOX0.hdE-9XWyFHx8X5VaCv0xnGfZjLc485y6XIhRwcGdEyk'
+const PASSWORD = 'px2024canada'
+
+const { createClient } = supabase
+const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+let allData = []
+let state = {
+  tab: 'ambulatorio',
+  periodo: '30',
+  view: 'general', // 'general' | 'detail'
+  selectedSede: null,
+  commentFilter: 'all',
+  commentSearch: '',
+  commentsShown: 10,
+  sortCol: null,
+  sortDir: 'desc',
+  intFilter: 'ambos'
+}
+let charts = {}
+
+// ─── AUTH ───────────────────────────────────────────
+function doLogin() {
+  if (document.getElementById('login-input').value === PASSWORD) {
+    localStorage.setItem('px_auth','1')
+    document.getElementById('login-screen').style.display = 'none'
+    document.getElementById('dashboard').style.display = 'block'
+    loadData()
+  } else {
+    document.getElementById('login-error').style.display = 'block'
+  }
+}
+function doLogout() { localStorage.removeItem('px_auth'); location.reload() }
+if (localStorage.getItem('px_auth')==='1') {
+  document.getElementById('login-screen').style.display = 'none'
+  document.getElementById('dashboard').style.display = 'block'
+  loadData()
+}
+
+// ─── DATA LOADING ────────────────────────────────────
+async function loadData() {
+  setLoading('Cargando datos...')
+  let all = [], from = 0
+  while (true) {
+    const { data, error } = await db.from('encuestas').select('*').order('created_at',{ascending:false}).range(from, from+999)
+    if (error || !data || data.length===0) break
+    all = all.concat(data)
+    if (data.length < 1000) break
+    from += 1000
+    setLoading(`Cargando... ${all.length} registros`)
+  }
+  allData = all
+  document.getElementById('last-update').textContent = `${allData.length.toLocaleString()} respuestas`
+  render()
+}
+
+function setLoading(msg) {
+  document.getElementById('main-content').innerHTML = `<div class="loading"><div class="spinner"></div><div class="loading-sub">${msg}</div></div>`
+}
+
+// ─── FILTERS ─────────────────────────────────────────
+function setTab(tab, btn) {
+  state.tab = tab; state.view = 'general'; state.selectedSede = null
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+  // Show/hide internacion filter
+  const show = tab === 'internacion'
+  document.getElementById('int-filter-label').style.display = show ? '' : 'none'
+  document.getElementById('int-filter-btn-ambos').style.display = show ? '' : 'none'
+  document.getElementById('int-filter-btn-estadía').style.display = show ? '' : 'none'
+  document.getElementById('int-filter-btn-alta').style.display = show ? '' : 'none'
+  render()
+}
+
+function setIntFilter(f, btn) {
+  state.intFilter = f
+  document.querySelectorAll('[id^="int-filter-btn"]').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+  render()
+}
+function setPeriodo(p, btn) {
+  state.periodo = p
+  btn.closest('.toolbar-left').querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'))
+  btn.classList.add('active')
+  render()
+}
+function onSearch() {
+  state.commentSearch = document.getElementById('search-box').value.toLowerCase()
+  state.commentsShown = 10
+  render()
+}
+
+function getFiltered() {
+  let data = [...allData]
+  const isAmb = state.tab === 'ambulatorio'
+  data = data.filter(r => r.tipo_formulario && (isAmb
+    ? r.tipo_formulario.toLowerCase().includes('ambulatori')
+    : !r.tipo_formulario.toLowerCase().includes('ambulatori')))
+  if (!isAmb) {
+    if (state.intFilter === 'estadía') data = data.filter(r => !r.sede.includes('ALTA'))
+    else if (state.intFilter === 'alta') data = data.filter(r => r.sede.includes('ALTA'))
+  }
+  if (state.periodo !== 'todos') {
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - parseInt(state.periodo))
+    data = data.filter(r => {
+      const d = new Date(r.fecha_respuesta || r.created_at)
+      return d >= cutoff
+    })
+  }
+  if (state.selectedSede) data = data.filter(r => r.sede === state.selectedSede)
+  return data
+}
+
+// ─── HELPERS ─────────────────────────────────────────
+const sedeLabels = {
+  'AMB_SC_CBA':'Sanatorio C+ CBA','AMB_SC_VM':'Sanatorio C+ Villa María','AMB_SC_RIO3':'Sanatorio C+ Río Tercero',
+  'AMB_CERRO':'Policlínica C+ Cerro','AMB_PUCARA':'Policlínica C+ Pucará','AMB_SARMIENTO':'Clínica C+ Sarmiento',
+  'AMB_CAPILLA':'Policlínica C+ Capilla del Monte',
+  'INT_SC_CBA':'Sanatorio C+ CBA','INT_ALTA_SC_CBA':'Sanatorio C+ CBA (Alta)','INT_SC_VM':'Sanatorio C+ Villa María',
+  'INT_ALTA_SC_VM':'Sanatorio C+ Villa María (Alta)','INT_SC_RIO3':'Sanatorio C+ Río Tercero','INT_ALTA_SC_RIO3':'Sanatorio C+ Río Tercero (Alta)',
+  'INT_SC_SARMIENTO':'Clínica C+ Sarmiento','INT_ALTA_SC_SARMIENTO':'Clínica C+ Sarmiento (Alta)',
+}
+function sedeLabel(s) { return sedeLabels[s] || s }
+
+function avg(arr, key) {
+  const v = arr.map(r=>parseFloat(r[key])).filter(v=>!isNaN(v)&&v>0)
+  return v.length ? (v.reduce((a,b)=>a+b,0)/v.length) : null
+}
+function avgF(arr, key) {
+  const a = avg(arr,key); return a ? parseFloat(a.toFixed(1)) : null
+}
+
+function scoreColor(v, max) {
+  if (v===null) return '#9B9B9B'
+  const t = max===10 ? [7,5] : [4,3]
+  return v>=t[0] ? '#2BA98B' : v>=t[1] ? '#EF9F27' : '#E24B4A'
+}
+function kpiClass(v, max) {
+  if (!v) return ''
+  const t = max===10 ? [7,5] : [4,3]
+  return v>=t[0] ? 'ok' : v>=t[1] ? 'warn' : 'danger'
+}
+function badgeHtml(v, max) {
+  if (v===null) return '<span class="badge badge-ok">—</span>'
+  const t = max===10 ? [7,5] : [4,3]
+  if (v>=t[0]) return '<span class="badge badge-ok">Normal</span>'
+  if (v>=t[1]) return '<span class="badge badge-warn">Atención</span>'
+  return '<span class="badge badge-danger">Alerta</span>'
+}
+function scoreBarHtml(v, max) {
+  if (v===null) return '<span style="color:var(--gray)">—</span>'
+  const pct = (v/max)*100
+  const c = scoreColor(v,max)
+  return `<div class="score-wrap"><span class="score-num" style="color:${c}">${v}</span><div class="score-bar"><div class="score-fill" style="width:${pct}%;background:${c}"></div></div></div>`
+}
+function formatDate(d) {
+  if (!d) return '—'
+  try {
+    const dt = new Date(d)
+    if (isNaN(dt)) return '—'
+    return dt.toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'})
+  } catch { return '—' }
+}
+function trend(curr, prev) {
+  if (!curr || !prev) return ''
+  const diff = (curr-prev).toFixed(1)
+  if (Math.abs(diff) < 0.1) return ''
+  return diff > 0
+    ? `<div class="kpi-trend up">↑ ${diff} vs período anterior</div>`
+    : `<div class="kpi-trend down">↓ ${Math.abs(diff)} vs período anterior</div>`
+}
+
+// ─── PREVIOUS PERIOD ─────────────────────────────────
+function getPrevPeriodData(tab) {
+  if (state.periodo === 'todos') return []
+  const days = parseInt(state.periodo)
+  const isAmb = tab === 'ambulatorio'
+  const cutoffNew = new Date(); cutoffNew.setDate(cutoffNew.getDate()-days)
+  const cutoffOld = new Date(); cutoffOld.setDate(cutoffOld.getDate()-days*2)
+  return allData.filter(r => {
+    const d = new Date(r.fecha_respuesta || r.created_at)
+    return d >= cutoffOld && d < cutoffNew &&
+      r.tipo_formulario && (isAmb
+        ? r.tipo_formulario.toLowerCase().includes('ambulatori')
+        : !r.tipo_formulario.toLowerCase().includes('ambulatori'))
+  })
+}
+
+// ─── RENDER ──────────────────────────────────────────
+function render() {
+  if (state.view === 'detail') renderDetail()
+  else renderGeneral()
+}
+
+function renderGeneral() {
+  const data = getFiltered()
+  const isAmb = state.tab === 'ambulatorio'
+  const max = isAmb ? 10 : 5
+  const prev = getPrevPeriodData(state.tab)
+
+  // Sedes
+  const sedes = {}
+  data.forEach(r => { if (!r.sede) return; if (!sedes[r.sede]) sedes[r.sede]=[]; sedes[r.sede].push(r) })
+
+  // Alertas
+  const alertas = []
+  Object.entries(sedes).forEach(([sede,rows]) => {
+    const keys = isAmb ? ['p1','p2','p3'] : ['p4','p5','p7','p8']
+    keys.forEach(k => {
+      const a = avgF(rows,k)
+      const t = max===10 ? 5 : 3
+      if (a && a < t) alertas.push({sede, msg:`${colLabel(k,isAmb)} con puntaje bajo: ${a}/${max}`, meta:`${rows.length} respuestas`})
+    })
+  })
+
+  // KPIs
+  const kpis = isAmb ? [
+    {label:'Experiencia Médico', key:'p1'},
+    {label:'Experiencia Recepción', key:'p2'},
+    {label:'NPS Recomendación', key:'p3'},
+  ] : [
+    {label:'Cuidado Médico', key:'p5'},
+    {label:'Cuidado Enfermería', key:'p4'},
+    {label:'Satisfacción General', key:'p8'},
+    {label:'Alimentación', key:'p7'},
+  ]
+
+  let html = ''
+
+  // Alertas
+  if (alertas.length) {
+    html += `<div class="alerts-box">
+      <div class="alerts-title">⚠ Alertas (${alertas.length}) — clic para ver detalle</div>
+      ${alertas.map(a=>`<div class="alert-row" onclick="openSede('${a.sede}')">
+        <div class="alert-dot"></div>
+        <div><div class="alert-text"><strong>${sedeLabel(a.sede)}</strong> — ${a.msg}</div>
+        <div class="alert-meta">${a.meta} · Clic para ver detalle →</div></div>
+      </div>`).join('')}
+    </div>`
+  }
+
+  // KPI cards
+  html += `<div class="kpi-grid">${kpis.map(k=>{
+    const v = avgF(data, k.key)
+    const vp = avgF(prev, k.key)
+    return `<div class="kpi-card">
+      <div class="kpi-label">${k.label} — red</div>
+      <div class="kpi-val ${kpiClass(v,max)}">${v||'—'}</div>
+      <div class="kpi-sub">sobre ${max} · ${data.length.toLocaleString()} respuestas</div>
+      ${trend(v,vp)}
+    </div>`
+  }).join('')}</div>`
+
+  // Tabla sedes
+  html += `<div class="section-label">Comparación por sede — clic para ver detalle</div>
+  <div class="table-card"><table class="data-table">
+    <thead><tr>
+      <th onclick="sortTable('sede')">Sede</th>
+      ${isAmb
+        ? `<th onclick="sortTable('p1')">Médico</th><th onclick="sortTable('p2')">Recepción</th><th onclick="sortTable('p3')">NPS</th>`
+        : `<th onclick="sortTable('p5')">Médico</th><th onclick="sortTable('p4')">Enfermería</th><th onclick="sortTable('p7')">Alimentación</th><th onclick="sortTable('p8')">Satisfacción</th>`}
+      <th onclick="sortTable('count')">Respuestas</th><th>Negativos</th><th>Estado</th>
+    </tr></thead>
+    <tbody>${renderSedeRows(sedes, isAmb, max)}</tbody>
+  </table></div>`
+
+  // Charts
+  const distKey = isAmb ? 'p3' : 'p8'
+  const dist = {}
+  for (let i=1;i<=max;i++) dist[i]=0
+  data.forEach(r=>{ const v=Math.round(parseFloat(r[distKey])); if(v>=1&&v<=max) dist[v]++ })
+
+  const dimVals = isAmb
+    ? [avgF(data,'p1'),avgF(data,'p2'),avgF(data,'p3')].map(v=>v||0)
+    : [avgF(data,'p5'),avgF(data,'p4'),avgF(data,'p7'),avgF(data,'p8')].map(v=>v||0)
+  const dimLabels = isAmb ? ['Médico','Recepción','NPS'] : ['Médico','Enfermería','Alimentación','Satisfacción']
+
+  html += `<div class="charts-grid">
+    <div class="chart-card"><div class="chart-title">Distribución de puntajes</div><div class="chart-wrap"><canvas id="chart-dist"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">Promedios por dimensión</div><div class="chart-wrap"><canvas id="chart-dims"></canvas></div></div>
+  </div>`
+
+  // Comments
+  html += renderCommentsSection(data, isAmb, max)
+
+  document.getElementById('main-content').innerHTML = html
+  setTimeout(()=>{ renderChartDist(dist,max); renderChartDims(dimVals,dimLabels,max) },100)
+}
+
+function renderSedeRows(sedes, isAmb, max) {
+  let entries = Object.entries(sedes).map(([sede,rows])=>{
+    const vals = isAmb
+      ? {p1:avgF(rows,'p1'), p2:avgF(rows,'p2'), p3:avgF(rows,'p3')}
+      : {p4:avgF(rows,'p4'), p5:avgF(rows,'p5'), p7:avgF(rows,'p7'), p8:avgF(rows,'p8')}
+    const allVals = Object.values(vals).filter(v=>v!==null)
+    const worst = allVals.length ? Math.min(...allVals) : null
+    const negCount = rows.filter(r => {
+      const scoreKey = isAmb ? 'p3' : 'p8'
+      const v = parseFloat(r[scoreKey])
+      return !isNaN(v) && v < (isAmb ? 5 : 3)
+    }).length
+    return {sede, rows, vals, worst, negCount}
+  })
+
+  if (state.sortCol) {
+    entries.sort((a,b)=>{
+      let va,vb
+      if (state.sortCol==='sede') { va=sedeLabel(a.sede); vb=sedeLabel(b.sede) }
+      else if (state.sortCol==='count') { va=a.rows.length; vb=b.rows.length }
+      else { va=a.vals[state.sortCol]||0; vb=b.vals[state.sortCol]||0 }
+      return state.sortDir==='asc' ? (va>vb?1:-1) : (va<vb?1:-1)
+    })
+  }
+
+  return entries.map(({sede,rows,vals,worst})=>`
+    <tr onclick="openSede('${sede}')">
+      <td><div class="sede-name">${sedeLabel(sede)}</div><div class="click-hint">Ver detalle →</div></td>
+      ${isAmb
+        ? `<td>${scoreBarHtml(vals.p1,max)}</td><td>${scoreBarHtml(vals.p2,max)}</td><td>${scoreBarHtml(vals.p3,max)}</td>`
+        : `<td>${scoreBarHtml(vals.p5,max)}</td><td>${scoreBarHtml(vals.p4,max)}</td><td>${scoreBarHtml(vals.p7,max)}</td><td>${scoreBarHtml(vals.p8,max)}</td>`}
+      <td style="color:var(--gray)">${rows.length.toLocaleString()}</td>
+      <td style="color:${negCount>0?'var(--danger)':'var(--gray)'};font-weight:${negCount>0?'700':'400'}">${negCount>0?'⚠ '+negCount:'-'}</td>
+      <td style="color:${negCount>0?'var(--danger)':'var(--gray)'};font-weight:${negCount>0?'700':'400'}">${negCount>0?'⚠ '+negCount:'-'}</td>
+      <td>${badgeHtml(worst,max)}</td>
+    </tr>`}).join('')
+    </tr>`).join('')
+}
+
+function sortTable(col) {
+  if (state.sortCol===col) state.sortDir = state.sortDir==='asc'?'desc':'asc'
+  else { state.sortCol=col; state.sortDir='desc' }
+  render()
+}
+
+function openSede(sede) {
+  state.selectedSede = sede
+  state.view = 'detail'
+  state.commentsShown = 10
+  render()
+}
+
+function renderDetail() {
+  const data = getFiltered()
+  const isAmb = state.tab === 'ambulatorio'
+  const max = isAmb ? 10 : 5
+  const sedeName = sedeLabel(state.selectedSede)
+
+  // Prev period for this sede
+  const prevAll = getPrevPeriodData(state.tab).filter(r=>r.sede===state.selectedSede)
+
+  const kpis = isAmb
+    ? [{label:'Médico',key:'p1'},{label:'Recepción',key:'p2'},{label:'NPS',key:'p3'}]
+    : [{label:'Médico',key:'p5'},{label:'Enfermería',key:'p4'},{label:'Satisfacción',key:'p8'},{label:'Alimentación',key:'p7'}]
+
+  // Network avg for comparison
+  const netData = allData.filter(r=>r.tipo_formulario&&(isAmb?r.tipo_formulario.toLowerCase().includes('ambulatori'):!r.tipo_formulario.toLowerCase().includes('ambulatori')))
+
+  let html = `
+    <button class="back-btn" onclick="goBack()">← Volver a todas las sedes</button>
+    <div class="detail-header">
+      <div>
+        <div class="detail-sede-name">${sedeName}</div>
+        <div class="detail-sub">${data.length.toLocaleString()} respuestas en el período seleccionado</div>
+      </div>
+    </div>`
+
+  // KPI cards with comparison
+  html += `<div class="kpi-grid">${kpis.map(k=>{
+    const v = avgF(data,k.key)
+    const vp = avgF(prevAll,k.key)
+    const vNet = avgF(netData,k.key)
+    const diff = v && vNet ? (v-vNet).toFixed(1) : null
+    const vsNet = diff ? `<div class="kpi-trend ${diff>=0?'up':'down'}">${diff>=0?'↑':'↓'} ${Math.abs(diff)} vs red</div>` : ''
+    return `<div class="kpi-card">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-val ${kpiClass(v,max)}">${v||'—'}</div>
+      <div class="kpi-sub">sobre ${max}</div>
+      ${trend(v,vp)}
+      ${vsNet}
+    </div>`
+  }).join('')}</div>`
+
+
+
+  // Detail charts
+  const detailDistKey = isAmb ? 'p3' : 'p8'
+  const detailMax = isAmb ? 10 : 5
+  const detailDist = {}
+  for (let i=1;i<=detailMax;i++) detailDist[i]=0
+  data.forEach(r=>{ const v=Math.round(parseFloat(r[detailDistKey])); if(v>=1&&v<=detailMax) detailDist[v]++ })
+
+  html += `<div class="charts-grid">
+    <div class="chart-card">
+      <div class="chart-title">Evolución del puntaje en el tiempo</div>
+      <div class="chart-wrap tall"><canvas id="chart-trend"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Distribución de puntajes — esta sede</div>
+      <div class="chart-wrap tall"><canvas id="chart-detail-dist"></canvas></div>
+    </div>
+  </div>`
+
+  // Comments
+  html += renderCommentsSection(data, isAmb, max)
+
+  document.getElementById('main-content').innerHTML = html
+  setTimeout(()=>{
+    renderTrendChart(data, isAmb)
+    // Render detail dist
+    const ddk = isAmb ? 'p3' : 'p8'
+    const ddm = isAmb ? 10 : 5
+    const dd = {}
+    for(let i=1;i<=ddm;i++) dd[i]=0
+    data.forEach(r=>{ const v=Math.round(parseFloat(r[ddk])); if(v>=1&&v<=ddm) dd[v]++ })
+    if(charts.detailDist) charts.detailDist.destroy()
+    const ctx2 = document.getElementById('chart-detail-dist')
+    if(ctx2) {
+      const colors = ddm===10
+        ? ['#E24B4A','#E24B4A','#E24B4A','#EF9F27','#EF9F27','#EF9F27','#F5C842','#5DCAA5','#2BA98B','#1E8A70']
+        : ['#E24B4A','#EF9F27','#F5C842','#5DCAA5','#2BA98B']
+      charts.detailDist = new Chart(ctx2,{type:'bar',data:{labels:Object.keys(dd).map(k=>k+'★'),datasets:[{data:Object.values(dd),backgroundColor:colors,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'},ticks:{font:{family:'Nunito'}}},x:{grid:{display:false},ticks:{font:{family:'Nunito'}}}}}})
+    }
+  }, 100)
+}
+
+function goBack() {
+  state.view = 'general'
+  state.selectedSede = null
+  state.commentsShown = 10
+  render()
+}
+
+// ─── COMMENTS ────────────────────────────────────────
+function renderCommentsSection(data, isAmb, max) {
+  const scoreKey = isAmb ? 'p3' : 'p8'
+  let comments = data.filter(r=>r.comentario&&r.comentario.trim().length>3)
+
+  // Filter by score
+  if (state.commentFilter === 'negative') comments = comments.filter(r=>{ const v=parseFloat(r[scoreKey]); return !isNaN(v)&&v<(max===10?5:3) })
+  else if (state.commentFilter === 'warning') comments = comments.filter(r=>{ const v=parseFloat(r[scoreKey]); const t=max===10?[5,7]:[3,4]; return !isNaN(v)&&v>=t[0]&&v<t[1] })
+  else if (state.commentFilter === 'positive') comments = comments.filter(r=>{ const v=parseFloat(r[scoreKey]); return !isNaN(v)&&v>=(max===10?7:4) })
+
+  // Search filter
+  if (state.commentSearch) comments = comments.filter(r=>r.comentario.toLowerCase().includes(state.commentSearch))
+
+  const shown = comments.slice(0, state.commentsShown)
+
+  return `
+    <div class="comments-header">
+      <div>
+        <div class="section-label" style="margin:0">Comentarios (${comments.length})</div>
+      </div>
+      <div class="comments-filters">
+        <button class="score-filter-btn ${state.commentFilter==='all'?'active':''}" onclick="setCommentFilter('all')">Todos</button>
+        <button class="score-filter-btn ${state.commentFilter==='negative'?'danger-active':''}" onclick="setCommentFilter('negative')">🔴 Negativos</button>
+        <button class="score-filter-btn ${state.commentFilter==='warning'?'warn-active':''}" onclick="setCommentFilter('warning')">🟡 Medios</button>
+        <button class="score-filter-btn ${state.commentFilter==='positive'?'active':''}" onclick="setCommentFilter('positive')">🟢 Positivos</button>
+      </div>
+    </div>
+    <div class="comments-list">
+      ${shown.length ? shown.map(r=>{
+        const v = parseFloat(r[scoreKey])
+        const cls = !isNaN(v) ? (v<(max===10?5:3)?'negative':v<(max===10?7:4)?'warning':'positive') : ''
+        const color = !isNaN(v) ? scoreColor(v,max) : '#9B9B9B'
+        return `<div class="comment-card ${cls}">
+          <div class="comment-head">
+            <div>
+              <div class="comment-sede">${sedeLabel(r.sede)}${r.sector ? ' · ' + r.sector : ''} · ${r.tipo_formulario||''}</div>
+              <div class="comment-date">${formatDate(r.fecha_respuesta||r.created_at)}</div>
+            </div>
+            <span class="comment-score" style="color:${color}">${!isNaN(v)?v+'/' +max:'—'}</span>
+          </div>
+          <div class="comment-text">"${r.comentario}"</div>
+        </div>`
+      }).join('') : '<div class="empty">No hay comentarios para los filtros seleccionados.</div>'}
+    </div>
+    ${comments.length > state.commentsShown ? `<button class="load-more-btn" onclick="loadMoreComments()">Cargar más comentarios (${comments.length - state.commentsShown} restantes)</button>` : ''}`
+}
+
+function setCommentFilter(f) {
+  state.commentFilter = f
+  state.commentsShown = 10
+  render()
+}
+
+function loadMoreComments() {
+  state.commentsShown += 20
+  render()
+}
+
+// ─── CHARTS ──────────────────────────────────────────
+function renderChartDist(dist, max) {
+  if (charts.dist) charts.dist.destroy()
+  const ctx = document.getElementById('chart-dist')
+  if (!ctx) return
+  const colors = max===10
+    ? ['#E24B4A','#E24B4A','#E24B4A','#EF9F27','#EF9F27','#EF9F27','#F5C842','#5DCAA5','#2BA98B','#1E8A70']
+    : ['#E24B4A','#EF9F27','#F5C842','#5DCAA5','#2BA98B']
+  charts.dist = new Chart(ctx,{
+    type:'bar',
+    data:{labels:Object.keys(dist).map(k=>`${k}★`),datasets:[{data:Object.values(dist),backgroundColor:colors,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'#F0F0F0'},ticks:{font:{family:'Nunito'}}},x:{grid:{display:false},ticks:{font:{family:'Nunito'}}}}}
+  })
+}
+
+function renderChartDims(vals, labels, max) {
+  if (charts.dims) charts.dims.destroy()
+  const ctx = document.getElementById('chart-dims')
+  if (!ctx) return
+  charts.dims = new Chart(ctx,{
+    type:'radar',
+    data:{labels,datasets:[{data:vals,backgroundColor:'rgba(43,169,139,0.15)',borderColor:'#2BA98B',pointBackgroundColor:'#2BA98B',borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{r:{min:0,max,ticks:{stepSize:max===10?2:1,font:{family:'Nunito'}},pointLabels:{font:{family:'Nunito',size:12}}}},plugins:{legend:{display:false}}}
+  })
+}
+
+function renderTrendChart(data, isAmb) {
+  if (charts.trend) charts.trend.destroy()
+  const ctx = document.getElementById('chart-trend')
+  if (!ctx) return
+
+  const key = isAmb ? 'p3' : 'p8'
+  const label = isAmb ? 'NPS' : 'Satisfacción general'
+
+  // Group by month
+  const monthly = {}
+  data.forEach(r => {
+    const d = new Date(r.fecha_respuesta || r.created_at)
+    if (isNaN(d)) return
+    const m = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`
+    if (!monthly[m]) monthly[m] = []
+    const v = parseFloat(r[key])
+    if (!isNaN(v) && v > 0) monthly[m].push(v)
+  })
+
+  const sorted = Object.entries(monthly).sort((a,b)=>a[0]>b[0]?1:-1)
+  const labels = sorted.map(([m])=>m)
+  const vals = sorted.map(([,v])=>v.length ? (v.reduce((a,b)=>a+b,0)/v.length).toFixed(1) : null)
+
+  charts.trend = new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[{label,data:vals,borderColor:'#2BA98B',backgroundColor:'rgba(43,169,139,0.1)',pointBackgroundColor:'#2BA98B',borderWidth:2.5,tension:.4,fill:true,spanGaps:true}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false,grid:{color:'#F0F0F0'},ticks:{font:{family:'Nunito'}}},x:{grid:{display:false},ticks:{font:{family:'Nunito'},maxTicksLimit:12}}}}
+  })
+}
+
+function colLabel(key, isAmb) {
+  const map = {p1:isAmb?'Médico':'Habitación',p2:isAmb?'Recepción':'Limpieza',p3:isAmb?'NPS':'Ropa de cama',p4:'Enfermería',p5:'Médico',p7:'Alimentación',p8:'Satisfacción general'}
+  return map[key] || key
+}
+</script>
+</body>
+</html>
