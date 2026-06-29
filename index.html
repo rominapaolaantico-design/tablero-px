@@ -550,8 +550,7 @@ function renderSedeRows(sedes, isAmb, max) {
         : `<td>${scoreBarHtml(vals.p5,max)}</td><td>${scoreBarHtml(vals.p4,max)}</td><td>${scoreBarHtml(vals.p7,max)}</td><td>${scoreBarHtml(vals.p8,max)}</td>`}
       <td style="color:var(--gray)">${rows.length.toLocaleString()}</td>
       <td style="color:${negCount>0?'var(--danger)':'var(--gray)'};font-weight:${negCount>0?'700':'400'}">${negCount>0?'⚠ '+negCount:'-'}</td>
-      <td style="color:${negCount>0?'var(--danger)':'var(--gray)'};font-weight:${negCount>0?'700':'400'}">${negCount>0?'⚠ '+negCount:'-'}</td>
-      <td>${badgeHtml(worst,max)}</td>
+<td style="color:${negCount>0?'var(--danger)':'var(--gray)'}">${negCount>0?negCount+' neg':'-'}</td>      <td>${badgeHtml(worst,max)}</td>
     </tr>`}).join('')
     </tr>`).join('')
 }
