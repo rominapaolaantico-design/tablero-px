@@ -179,7 +179,7 @@ body { font-family: var(--font); background: var(--gray-light); color: var(--gra
 
 <div id="login-screen">
   <div class="login-card">
-    <img src="https://www.sanatoriodelacanada.com/wp-content/uploads/2020/07/logo-sanatorio-de-la-canada.png" class="login-logo" alt="Red de la Cañada" onerror="this.style.display='none'">
+    <img src="https://rominapaolaantico-design.github.io/tablero-px/logo.png" class="login-logo" alt="Red de la Cañada" onerror="this.style.display='none'">
     <div class="login-title">Tablero de Experiencia del Paciente</div>
     <div class="login-sub">Ingresá tu contraseña para acceder</div>
     <input type="password" id="login-input" class="login-input" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()">
@@ -309,7 +309,7 @@ function setIntFilter(f, btn) {
 }
 function setPeriodo(p, btn) {
   state.periodo = p
-  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'))
+  btn.closest('.toolbar-left').querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'))
   btn.classList.add('active')
   render()
 }
@@ -549,7 +549,9 @@ function renderSedeRows(sedes, isAmb, max) {
         ? `<td>${scoreBarHtml(vals.p1,max)}</td><td>${scoreBarHtml(vals.p2,max)}</td><td>${scoreBarHtml(vals.p3,max)}</td>`
         : `<td>${scoreBarHtml(vals.p5,max)}</td><td>${scoreBarHtml(vals.p4,max)}</td><td>${scoreBarHtml(vals.p7,max)}</td><td>${scoreBarHtml(vals.p8,max)}</td>`}
       <td style="color:var(--gray)">${rows.length.toLocaleString()}</td>
+      <td style="color:${negCount>0?'var(--danger)':'var(--gray)'};font-weight:${negCount>0?'700':'400'}">${negCount>0?'⚠ '+negCount:'-'}</td>
       <td>${badgeHtml(worst,max)}</td>
+    </tr>`}).join('')
     </tr>`).join('')
 }
 
@@ -692,7 +694,7 @@ function renderCommentsSection(data, isAmb, max) {
         return `<div class="comment-card ${cls}">
           <div class="comment-head">
             <div>
-              <div class="comment-sede">${sedeLabel(r.sede)} · ${r.tipo_formulario||''}</div>
+              <div class="comment-sede">${sedeLabel(r.sede)}${r.sector ? ' · ' + r.sector : ''} · ${r.tipo_formulario||''}</div>
               <div class="comment-date">${formatDate(r.fecha_respuesta||r.created_at)}</div>
             </div>
             <span class="comment-score" style="color:${color}">${!isNaN(v)?v+'/' +max:'—'}</span>
