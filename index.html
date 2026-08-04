@@ -800,9 +800,12 @@ function renderDetail() {
   // Prev period for this sede (respeta también el sector si hay uno elegido)
   const prevAll = getPrevPeriodData(state.tab).filter(r=>r.sede===state.selectedSede && (!state.selectedSector || r.sector===state.selectedSector))
 
-  const kpis = isAmb
-    ? [{label:'Médico',key:'p1'},{label:'Recepción',key:'p2'},{label:'Recomendación (promedio)',key:'p3'}]
-    : [{label:'Médico',key:'p5'},{label:'Enfermería',key:'p4'},{label:'Satisfacción',key:'p8'},{label:'Alimentación',key:'p7'}]
+  const isAlta = !isAmb && data.length && data.every(r => r.tipo_formulario && r.tipo_formulario.toLowerCase().includes('alta'))
+    const kpis = isAmb
+      ? [{label:'Médico',key:'p1'},{label:'Recepción',key:'p2'},{label:'Recomendación (promedio)',key:'p3'}]
+      : isAlta
+        ? [{label:'Médico',key:'p6'},{label:'Enfermería',key:'p7'},{label:'Satisfacción',key:'p12'},{label:'Alimentación',key:'p8'}]
+        : [{label:'Médico',key:'p5'},{label:'Enfermería',key:'p4'},{label:'Satisfacción',key:'p8'},{label:'Alimentación',key:'p7'}]
 
   // Network avg for comparison
   const netData = allData.filter(r=>r.tipo_formulario&&(isAmb?r.tipo_formulario.toLowerCase().includes('ambulatori'):!r.tipo_formulario.toLowerCase().includes('ambulatori')))
