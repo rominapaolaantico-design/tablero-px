@@ -390,7 +390,7 @@ async function loadData() {
   setLoading('Cargando datos...')
   let all = [], from = 0, huboError = false
   while (true) {
-    const { data, error } = await db.from('encuestas').select('*').order('created_at',{ascending:false}).range(from, from+999)
+    const { data, error } = await db.from('encuestas_tablero').select('*').order('created_at',{ascending:false}).range(from, from+999)
     if (error) { huboError = true; console.error('Error cargando encuestas desde Supabase:', error); break }
     if (!data || data.length===0) break
     all = all.concat(data)
